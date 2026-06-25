@@ -491,72 +491,77 @@ struct SessionListView: View {
     }
 
     private func openInTerminal(sessionId: String?, cwd: String?, skipPermissions: Bool) {
-        let workDir = (cwd?.isEmpty ?? true) ? NSHomeDirectory() : cwd!
-        var args: [String]
+        var claudeArgs: [String]
 
         if let sid = sessionId {
             if skipPermissions {
-                args = ["-r", sid, "--dangerously-skip-permissions"]
+                claudeArgs = ["-r", sid, "--dangerously-skip-permissions"]
             } else {
-                args = ["-r", sid]
+                claudeArgs = ["-r", sid]
             }
         } else {
             if skipPermissions {
-                args = ["--dangerously-skip-permissions"]
+                claudeArgs = ["--dangerously-skip-permissions"]
             } else {
-                args = []
+                claudeArgs = []
             }
         }
 
-        let command = "cd '\(workDir)' && claude \(args.map { "'\($0)'" }.joined(separator: " "))"
+        let workDir = (cwd?.isEmpty ?? true) ? NSHomeDirectory() : cwd!
         let terminal = preferredTerminal()
 
         switch terminal {
         case .terminal:
+            let cmd = "claude \(claudeArgs.map { "'\($0)'" }.joined(separator: " "))"
             runAppleScript("""
             tell application "Terminal"
                 activate
-                do script "\(command.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))"
+                do script "\(cmd.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))"
             end tell
             """)
 
         case .iterm:
+            let cmd = "claude \(claudeArgs.map { "'\($0)'" }.joined(separator: " "))"
             runAppleScript("""
             tell application "iTerm2"
                 activate
-                create window with default profile command "\(command.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))"
+                create window with default profile command "\(cmd.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))"
             end tell
             """)
 
         case .ghostty:
-            // Ghostty: use -e flag like other terminals
             if let ghosttyURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: terminal.bundleID) {
                 let exeURL = ghosttyURL.appendingPathComponent("Contents/MacOS/ghostty")
                 let process = Process()
                 process.executableURL = exeURL
-                process.arguments = ["-e", "bash", "-c", command]
+                var args = ["-e", "claude"]
+                args.append(contentsOf: claudeArgs)
+                process.arguments = args
+                process.currentDirectoryURL = URL(fileURLWithPath: workDir)
                 try? process.run()
             }
 
         case .warp:
-            // Warp supports opening via deep link or CLI
             if let warpURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: terminal.bundleID) {
                 let exeURL = warpURL.appendingPathComponent("Contents/MacOS/Warp")
                 let process = Process()
                 process.executableURL = exeURL
-                process.arguments = ["--", "-e", "bash", "-c", command]
+                var args = ["--", "-e", "claude"]
+                args.append(contentsOf: claudeArgs)
+                process.arguments = args
                 process.currentDirectoryURL = URL(fileURLWithPath: workDir)
                 try? process.run()
             }
 
         case .alacritty, .kitty:
-            // Alacritty/Kitty: launch with -e flag
             if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: terminal.bundleID) {
                 let exeName = terminal == .alacritty ? "alacritty" : "kitty"
                 let exeURL = appURL.appendingPathComponent("Contents/MacOS/\(exeName)")
                 let process = Process()
                 process.executableURL = exeURL
-                process.arguments = ["-e", "bash", "-c", command]
+                var args = ["-e", "claude"]
+                args.append(contentsOf: claudeArgs)
+                process.arguments = args
                 process.currentDirectoryURL = URL(fileURLWithPath: workDir)
                 try? process.run()
             }
