@@ -491,7 +491,7 @@ struct SessionListView: View {
     }
 
     private func openInTerminal(sessionId: String?, cwd: String?, skipPermissions: Bool) {
-        let workDir = cwd ?? NSHomeDirectory()
+        let workDir = (cwd?.isEmpty ?? true) ? NSHomeDirectory() : cwd!
         var args: [String]
 
         if let sid = sessionId {
