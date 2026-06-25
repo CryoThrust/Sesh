@@ -529,13 +529,12 @@ struct SessionListView: View {
             """)
 
         case .ghostty:
-            // Ghostty CLI: ghostty --command="..." or open via URL scheme / direct binary
+            // Ghostty: use -e flag like other terminals
             if let ghosttyURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: terminal.bundleID) {
                 let exeURL = ghosttyURL.appendingPathComponent("Contents/MacOS/ghostty")
                 let process = Process()
                 process.executableURL = exeURL
-                process.arguments = ["--command=\(command)"]
-                process.currentDirectoryURL = URL(fileURLWithPath: workDir)
+                process.arguments = ["-e", "bash", "-c", command]
                 try? process.run()
             }
 
