@@ -352,7 +352,7 @@ struct SessionListView: View {
                         Text(term.rawValue).tag(term.rawValue)
                     }
                 }
-                .frame(width: 120)
+                .frame(width: 150)
                 .help("Choose which terminal to open sessions in")
 
                 Spacer()
