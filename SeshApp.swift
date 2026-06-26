@@ -534,9 +534,8 @@ struct SessionListView: View {
                 let exeURL = ghosttyURL.appendingPathComponent("Contents/MacOS/ghostty")
                 let process = Process()
                 process.executableURL = exeURL
-                var args = ["-e", "claude"]
-                args.append(contentsOf: claudeArgs)
-                process.arguments = args
+                let cmd = "claude \(claudeArgs.map { "'\($0)'" }.joined(separator: " "))"
+                process.arguments = ["-e", "bash", "-lc", cmd]
                 process.currentDirectoryURL = URL(fileURLWithPath: workDir)
                 try? process.run()
             }
@@ -546,9 +545,8 @@ struct SessionListView: View {
                 let exeURL = warpURL.appendingPathComponent("Contents/MacOS/Warp")
                 let process = Process()
                 process.executableURL = exeURL
-                var args = ["--", "-e", "claude"]
-                args.append(contentsOf: claudeArgs)
-                process.arguments = args
+                let cmd = "claude \(claudeArgs.map { "'\($0)'" }.joined(separator: " "))"
+                process.arguments = ["--", "-e", "bash", "-lc", cmd]
                 process.currentDirectoryURL = URL(fileURLWithPath: workDir)
                 try? process.run()
             }
@@ -559,9 +557,8 @@ struct SessionListView: View {
                 let exeURL = appURL.appendingPathComponent("Contents/MacOS/\(exeName)")
                 let process = Process()
                 process.executableURL = exeURL
-                var args = ["-e", "claude"]
-                args.append(contentsOf: claudeArgs)
-                process.arguments = args
+                let cmd = "claude \(claudeArgs.map { "'\($0)'" }.joined(separator: " "))"
+                process.arguments = ["-e", "bash", "-lc", cmd]
                 process.currentDirectoryURL = URL(fileURLWithPath: workDir)
                 try? process.run()
             }
