@@ -492,6 +492,7 @@ struct SessionListView: View {
 
     private func openInTerminal(sessionId: String?, cwd: String?, skipPermissions: Bool) {
         var claudeArgs: [String]
+        let claudePath = findClaudePath()
 
         if let sid = sessionId {
             if skipPermissions {
@@ -534,8 +535,9 @@ struct SessionListView: View {
                 let exeURL = ghosttyURL.appendingPathComponent("Contents/MacOS/ghostty")
                 let process = Process()
                 process.executableURL = exeURL
-                let cmd = "claude \(claudeArgs.map { "'\($0)'" }.joined(separator: " "))"
-                process.arguments = ["-e", "bash", "-lc", cmd]
+                var args = ["-e", claudePath]
+                args.append(contentsOf: claudeArgs)
+                process.arguments = args
                 process.currentDirectoryURL = URL(fileURLWithPath: workDir)
                 try? process.run()
             }
@@ -567,6 +569,43 @@ struct SessionListView: View {
 
     private func preferredTerminal() -> TerminalApp {
         TerminalApp(rawValue: preferredTerminalRaw) ?? .terminal
+    }
+
+    private func findClaudePath() -> String {
+        // Try common locations first
+        let candidates = [
+            "/opt/homebrew/bin/claude",
+            "/usr/local/bin/claude",
+            NSHomeDirectory() + "/.nvm/versions/node/*/bin/claude"
+        ]
+        let fm = FileManager.default
+        for path in candidates {
+            if path.contains("*") {
+                // Glob pattern — try to expand
+                if let urls = try? fm.contentsOfDirectory(atPath: NSString(string: path).deletingLastPathComponent) {
+                    for item in urls.sorted().reversed() {
+                        let full = NSString(string: path).deletingLastPathComponent + "/" + item + "/bin/claude"
+                        if fm.isExecutableFile(atPath: full) { return full }
+                    }
+                }
+            } else if fm.isExecutableFile(atPath: path) {
+                return path
+            }
+        }
+        // Fallback: use `which`
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        process.arguments = ["claude"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        try? process.run()
+        process.waitUntilExit()
+        if let data = try? pipe.fileHandleForReading.readToEnd(),
+           let result = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !result.isEmpty {
+            return result
+        }
+        return "claude"
     }
 
     private func runAppleScript(_ source: String) {
